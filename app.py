@@ -18,9 +18,9 @@ TOKENIZER_PATH = os.path.join(BASE_DIR, "tokenizer.pkl")
 MAX_LEN = 100
 
 VERSION_HISTORY = [
-    {"versi": "v1", "perubahan": "Model dasar GRU (.h5) untuk klasifikasi sentimen review film. Antarmuka standar."},
-    {"versi": "v2", "perubahan": "Optimasi model (ONNX Runtime) untuk inferensi lebih cepat, ditambah probabilitas breakdown."},
-    {"versi": "v3 (Final)", "perubahan": "Perombakan UI total menyerupai website IMDb asli, dengan fitur Benchmark & Navigasi."},
+    {"versi": "v1", "perubahan": "Model dasar GRU (.h5) untuk klasifikasi sentimen review film. Antarmuka standar: input teks, prediksi sentimen + confidence score."},
+    {"versi": "v2", "perubahan": "Optimasi model (ONNX Runtime) untuk inferensi lebih cepat, ditambah pilihan mesin inferensi, probabilitas breakdown dua kelas, dan riwayat prediksi."},
+    {"versi": "v3 (Final)", "perubahan": "Perombakan UI total menyerupai website IMDb asli, navigasi multi-halaman, fitur Model Deep Dive (arsitektur GRU, tokenizer, top keywords), dan halaman Trivia & Versions."},
 ]
 
 st.set_page_config(page_title="IMDb: Ratings, Reviews, and Where to Watch", page_icon="🎬", layout="wide")
@@ -229,11 +229,11 @@ with st.sidebar:
     st.markdown("<h2 style='color:#F5C518;'>Navigation</h2>", unsafe_allow_html=True)
     page = st.radio(
         "Menu",
-        ["Home: Review Analysis", "Box Office: Benchmarks", "Trivia & Versions"],
+        ["Home: Review Analysis", "About the Model", "Trivia & Versions"],
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.caption("IMDb Sentiment by marcellmchan")
+    st.caption("IMDb Clone v3 by marcellmchan")
 
 # ============================================================
 # HALAMAN 1 — ANALISIS ULASAN (IMDB LAYOUT)
@@ -352,74 +352,103 @@ if page == "Home: Review Analysis":
             st.markdown("<p style='color: #777; font-size:13px;'>No reviews submitted yet.</p>", unsafe_allow_html=True)
 
 # ============================================================
-# HALAMAN 2 — UJI PERFORMA MODEL (BENCHMARK)
+# HALAMAN 2 — MODEL DEEP DIVE
 # ============================================================
-elif page == "Box Office: Benchmarks":
-    st.markdown("<h1 class='page-title'>Engine Benchmarks</h1>", unsafe_allow_html=True)
-    st.write(
-        "Ketahui seberapa efisien ONNX Runtime dibandingkan Keras standar. Kami akan menjalankan ulasan "
-        "terakhir Anda berulang kali untuk mendapatkan rata-rata waktu inferensi."
+elif page == "About the Model":
+    st.markdown("<h1 class='page-title'>Model Deep Dive</h1>", unsafe_allow_html=True)
+    st.write("Pelajari cara model AI ini bekerja di balik layar — dari teks mentah hingga prediksi sentimen.")
+
+    st.markdown("---")
+
+    # ---- ARSITEKTUR GRU ----
+    st.markdown("<h2>🧠 Arsitektur Model GRU</h2>", unsafe_allow_html=True)
+    col1, col2, col3, col4 = st.columns(4)
+    col1.markdown("""
+    <div class="spec-card" style="text-align:center;">
+        <p class="label">Layer Input</p>
+        <p class="value">Embedding</p>
+        <p style="color:#AAA; font-size:12px;">Vocab 10.000 kata<br>Seq. Length 100</p>
+    </div>""", unsafe_allow_html=True)
+    col2.markdown("""
+    <div class="spec-card" style="text-align:center;">
+        <p class="label">Hidden Layer</p>
+        <p class="value">GRU</p>
+        <p style="color:#AAA; font-size:12px;">Gated Recurrent Unit<br>Menangkap konteks urutan kata</p>
+    </div>""", unsafe_allow_html=True)
+    col3.markdown("""
+    <div class="spec-card" style="text-align:center;">
+        <p class="label">Output Layer</p>
+        <p class="value">Dense</p>
+        <p style="color:#AAA; font-size:12px;">Aktivasi Sigmoid<br>Output 0.0 – 1.0</p>
+    </div>""", unsafe_allow_html=True)
+    col4.markdown("""
+    <div class="spec-card" style="text-align:center;">
+        <p class="label">Dataset Pelatihan</p>
+        <p class="value">IMDB</p>
+        <p style="color:#AAA; font-size:12px;">50.000 review film<br>Label Positif / Negatif</p>
+    </div>""", unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ---- CARA TOKENIZER BEKERJA ----
+    st.markdown("<h2>🔤 Cara Tokenizer Bekerja</h2>", unsafe_allow_html=True)
+    
+    tokenizer = get_tokenizer()
+    example_sentence = st.text_input(
+        "Ketik kalimat untuk melihat proses tokenisasi:",
+        value="This movie was amazing and brilliant!"
     )
 
-    st.markdown(f"""
-    <div style="background:#121212; padding:15px; border-left:4px solid #F5C518; margin-bottom:20px;">
-        <p style="color:#AAA; font-size:12px; margin:0;">Test Input:</p>
-        <p style="color:#FFF; margin:0; font-style:italic;">"{st.session_state.current_text[:120]}..."</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if example_sentence.strip():
+        cleaned = example_sentence.lower()
+        cleaned = re.sub(r'<[^>]*>', '', cleaned)
+        cleaned = re.sub(r'[^a-zA-Z0-9\s]', '', cleaned)
+        words = cleaned.split()
+
+        sequences = tokenizer.texts_to_sequences([cleaned])
+        padded = pad_sequences(sequences, maxlen=MAX_LEN, padding='post', truncating='post')
+
+        st.markdown(f"**1. Teks asli:** `{example_sentence}`")
+        st.markdown(f"**2. Setelah cleaning (lowercase, hapus karakter khusus):** `{cleaned}`")
+        
+        word_token_map = []
+        for word in words:
+            idx = tokenizer.word_index.get(word, None)
+            word_token_map.append({"Kata": word, "Token ID": idx if idx else "⚠️ Tidak dikenali (OOV)"})
+        
+        import pandas as pd
+        st.markdown("**3. Konversi kata → token ID:**")
+        st.dataframe(pd.DataFrame(word_token_map), use_container_width=True, hide_index=True)
+        st.markdown(f"**4. Padding ke panjang 100:** `{list(padded[0][:15])}... (+ {MAX_LEN - min(len(words), MAX_LEN)} padding 0)`")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ---- TOP KEYWORDS ----
+    st.markdown("<h2>📊 Top Keywords Paling Berpengaruh</h2>", unsafe_allow_html=True)
+    st.write("Kata-kata dengan frekuensi tertinggi dalam dataset IMDB yang dikenali model:")
     
-    n_runs = st.slider("Number of benchmark runs:", min_value=3, max_value=20, value=10)
+    # Ambil top 20 kata dari tokenizer (skip stopwords umum)
+    stopwords = {"the", "a", "and", "of", "to", "is", "in", "it", "i", "this", "that", "was", "for", "on", "are", "with", "as", "be", "by", "at"}
+    top_words = [(word, idx) for word, idx in sorted(tokenizer.word_index.items(), key=lambda x: x[1]) if word not in stopwords][:30]
+    
+    # Kata berkonotasi positif & negatif
+    positive_keywords = ["great", "good", "excellent", "wonderful", "best", "amazing", "love", "brilliant", "perfect", "enjoyed", "fantastic", "beautiful", "powerful", "outstanding"]
+    negative_keywords = ["bad", "worst", "terrible", "awful", "boring", "waste", "disappointing", "horrible", "poor", "stupid", "pointless", "dull"]
+    
+    col_pos, col_neg = st.columns(2)
+    with col_pos:
+        st.markdown("<h3 style='color:#F5C518;'>🌟 Sinyal Positif</h3>", unsafe_allow_html=True)
+        for kw in positive_keywords:
+            idx = tokenizer.word_index.get(kw, None)
+            if idx:
+                st.markdown(f"<div style='background:#121212; padding:6px 12px; border-radius:4px; margin-bottom:5px; border-left:3px solid #F5C518;'><span style='color:#FFF;'>`{kw}`</span> <span style='color:#888; float:right; font-size:12px;'>Token #{idx}</span></div>", unsafe_allow_html=True)
+    with col_neg:
+        st.markdown("<h3 style='color:#E50914;'>💔 Sinyal Negatif</h3>", unsafe_allow_html=True)
+        for kw in negative_keywords:
+            idx = tokenizer.word_index.get(kw, None)
+            if idx:
+                st.markdown(f"<div style='background:#121212; padding:6px 12px; border-radius:4px; margin-bottom:5px; border-left:3px solid #E50914;'><span style='color:#FFF;'>`{kw}`</span> <span style='color:#888; float:right; font-size:12px;'>Token #{idx}</span></div>", unsafe_allow_html=True)
 
-    if st.button("Start Benchmark"):
-        tokenizer = get_tokenizer()
-        processed = preprocess_text(st.session_state.current_text, tokenizer)
-        
-        with st.spinner("Running benchmarks..."):
-            predict_keras(processed)
-            predict_onnx(processed)
-
-            keras_times, onnx_times = [], []
-            for _ in range(n_runs):
-                t0 = time.perf_counter()
-                prob_h5 = predict_keras(processed)
-                keras_times.append((time.perf_counter() - t0) * 1000)
-
-                t0 = time.perf_counter()
-                prob_onnx = predict_onnx(processed)
-                onnx_times.append((time.perf_counter() - t0) * 1000)
-
-        label_h5, conf_h5, _, _ = classify(prob_h5)
-        label_onnx, conf_onnx, _, _ = classify(prob_onnx)
-        avg_h5 = sum(keras_times) / len(keras_times)
-        avg_onnx = sum(onnx_times) / len(onnx_times)
-        size_h5 = file_size_mb(H5_MODEL_PATH)
-        size_onnx = file_size_mb(ONNX_MODEL_PATH)
-
-        st.write("")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown(f"""
-            <div class="spec-card">
-                <p class="label">Keras H5 Engine</p>
-                <p class="value">{size_h5:.1f} MB</p>
-                <p style="color:#FFF; margin-bottom:5px;">⏱ {avg_h5:.2f} ms / run</p>
-                <p style="color:#AAA; font-size:12px; margin:0;">Output: {label_h5} ({conf_h5*100:.1f}%)</p>
-            </div>
-            """, unsafe_allow_html=True)
-        with c2:
-            st.markdown(f"""
-            <div class="spec-card">
-                <p class="label">ONNX Runtime Engine</p>
-                <p class="value">{size_onnx:.1f} MB</p>
-                <p style="color:#FFF; margin-bottom:5px;">⏱ {avg_onnx:.2f} ms / run</p>
-                <p style="color:#AAA; font-size:12px; margin:0;">Output: {label_onnx} ({conf_onnx*100:.1f}%)</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        speed_diff = abs(avg_h5 - avg_onnx)
-        speed_note = "faster" if avg_onnx < avg_h5 else "slower"
-        
-        st.success(f"**Result:** ONNX Engine is **{speed_diff:.2f} ms {speed_note}** than Keras for this workload.")
 
 # ============================================================
 # HALAMAN 3 — TENTANG & VERSI
@@ -442,4 +471,4 @@ else:
         """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit • Week 5 Deployment Project</div>", unsafe_allow_html=True)
