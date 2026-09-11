@@ -233,7 +233,7 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.caption("IMDb Clone v3 by marcellmchan")
+    st.caption("IMDb Sentiment by marcellmchan")
 
 # ============================================================
 # HALAMAN 1 — ANALISIS ULASAN (IMDB LAYOUT)
