@@ -18,90 +18,158 @@ TOKENIZER_PATH = os.path.join(BASE_DIR, "tokenizer.pkl")
 MAX_LEN = 100
 
 VERSION_HISTORY = [
-    {
-        "versi": "v1",
-        "perubahan": "Implementasi dasar model GRU (.h5) untuk klasifikasi sentimen review film berbahasa Inggris. Antarmuka satu halaman: input teks, lihat sentimen.",
-    },
-    {
-        "versi": "v2",
-        "perubahan": "Menambahkan opsi model teroptimasi (ONNX Runtime) untuk inferensi yang lebih cepat, breakdown probabilitas kelas, dan info perbandingan ukuran file.",
-    },
-    {
-        "versi": "v3 (Final)",
-        "perubahan": "Desain ulang antarmuka menjadi tema Cinematic/IMDb gelap, penambahan navigasi multi-halaman, dan fitur Uji Performa Benchmark secara langsung.",
-    },
+    {"versi": "v1", "perubahan": "Model dasar GRU (.h5) untuk klasifikasi sentimen review film. Antarmuka standar."},
+    {"versi": "v2", "perubahan": "Optimasi model (ONNX Runtime) untuk inferensi lebih cepat, ditambah probabilitas breakdown."},
+    {"versi": "v3 (Final)", "perubahan": "Perombakan UI total menyerupai website IMDb asli, dengan fitur Benchmark & Navigasi."},
 ]
 
-st.set_page_config(page_title="Cinematic Sentiment Analysis v3", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="IMDb: Ratings, Reviews, and Where to Watch", page_icon="🎬", layout="wide")
 
 # ============================================================
-# GAYA (CSS) - Cinematic Dark Theme
+# GAYA (CSS) - IMDB CLONE THEME
 # ============================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+    
+    /* Reset & General Body */
+    .stApp {
+        background-color: #000000;
+        color: #FFFFFF;
+        font-family: 'Roboto', sans-serif;
+    }
+    
+    /* Hide top padding */
+    .block-container { padding-top: 1rem; }
 
-:root {
-    --bg: #0E0E10; --panel: #1A1A1D; --text-main: #E0E0E0; --text-muted: #888888;
-    --imdb-yellow: #F5C518; --imdb-yellow-hover: #E2B616;
-    --positive: #F5C518; --negative: #E50914;
-    --border: #333333;
-}
+    /* Navbar Mockup IMDb */
+    .imdb-navbar {
+        background-color: #121212;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 25px;
+        margin-top: -15px;
+        margin-left: -50px;
+        margin-right: -50px;
+    }
+    .imdb-logo {
+        background-color: #F5C518;
+        color: #000000;
+        font-weight: 900;
+        font-size: 24px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        letter-spacing: -1px;
+        margin-right: 20px;
+    }
+    .imdb-menu-icon {
+        color: #FFFFFF;
+        font-weight: bold;
+        margin-right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .imdb-search-bar {
+        flex-grow: 1;
+        background-color: #FFFFFF;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        padding: 4px 10px;
+        color: #000;
+        margin-right: 20px;
+        height: 32px;
+    }
+    .imdb-search-input {
+        color: #777;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .imdb-nav-links {
+        display: flex;
+        gap: 20px;
+        font-weight: bold;
+        font-size: 14px;
+        align-items: center;
+    }
 
-.stApp { background: var(--bg); color: var(--text-main); font-family: 'Roboto', sans-serif; }
-h1, h2, h3 { color: var(--imdb-yellow) !important; font-weight: 700 !important; }
-p, span, label, .stMarkdown { color: var(--text-main); }
+    /* Sidebar */
+    [data-testid="stSidebar"] { background-color: #121212; border-right: 1px solid #333; }
+    [data-testid="stSidebar"] * { color: #CCCCCC !important; }
+    [data-testid="stSidebar"] div[role="radiogroup"] label {
+        background: transparent; border: none; padding: 0.4rem 0; margin-right: 0;
+    }
+    [data-testid="stSidebar"] input[type="radio"] { accent-color: #F5C518; }
+    [data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p { color: #F5C518 !important; font-weight: 700; }
 
-/* Sidebar */
-[data-testid="stSidebar"] { background-color: #121212; border-right: 1px solid var(--border); }
-[data-testid="stSidebar"] * { color: #CCCCCC !important; }
-[data-testid="stSidebar"] div[role="radiogroup"] label {
-    background: transparent; border: none; padding: 0.4rem 0; margin-right: 0;
-}
-[data-testid="stSidebar"] input[type="radio"] { accent-color: var(--imdb-yellow); }
-[data-testid="stSidebar"] div[role="radiogroup"] label p { font-weight: 400; }
-[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p { color: var(--imdb-yellow) !important; font-weight: 700; }
+    /* Headers */
+    h1, h2, h3 { color: #F5C518 !important; }
+    .page-title { color: #FFF !important; font-size: 2.5rem; margin-bottom: 0.2rem;}
+    
+    /* Text Area */
+    .stTextArea textarea {
+        background-color: #1A1A1A !important;
+        color: #FFFFFF !important;
+        border: 1px solid #333333 !important;
+        border-radius: 4px;
+    }
+    .stTextArea textarea:focus {
+        border-color: #F5C518 !important;
+        box-shadow: 0 0 0 1px #F5C518 !important;
+    }
 
-/* Main Area Radio */
-div[role="radiogroup"] label {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 4px; padding: 0.3rem 0.8rem; margin-right: 0.4rem;
-}
-.main input[type="radio"] { accent-color: var(--imdb-yellow); }
+    /* Buttons */
+    .stButton>button {
+        background-color: #F5C518 !important;
+        color: #000000 !important;
+        font-weight: bold;
+        border-radius: 4px;
+        border: none;
+        padding: 8px 20px;
+    }
+    .stButton>button:hover { background-color: #E2B616 !important; }
 
-/* Buttons */
-.stButton>button {
-    background: var(--imdb-yellow); color: #000000 !important; border: none;
-    border-radius: 4px; padding: 0.55rem 1.4rem; font-weight: 700;
-}
-.stButton>button:hover { background: var(--imdb-yellow-hover); color: #000000 !important; }
-.stButton>button p, .stButton>button span, .stButton>button div { color: #000000 !important; }
+    /* Radio buttons */
+    div[role="radiogroup"] label {
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 5px 10px;
+        margin-right: 10px;
+        background-color: #121212;
+    }
+    .main input[type="radio"] { accent-color: #F5C518; }
+    
+    /* Metric Cards */
+    .spec-card {
+        background: #121212; border: 1px solid #333; border-radius: 4px; padding: 1rem 1.2rem; margin-bottom: 15px;
+    }
+    .spec-card .label { color: #AAA; font-size: 0.85rem; font-weight:bold; }
+    .spec-card .value { color: #F5C518; font-size: 1.6rem; font-weight: 900; margin-top: 0.1rem; margin-bottom: 0.2rem;}
 
-/* Text Area */
-.stTextArea textarea {
-    background-color: var(--panel) !important; color: #FFF !important;
-    border: 1px solid var(--border) !important; border-radius: 6px !important;
-}
-.stTextArea textarea:focus { border-color: var(--imdb-yellow) !important; box-shadow: 0 0 0 1px var(--imdb-yellow) !important; }
-
-/* Progress Bar */
-.stProgress > div > div { background: var(--imdb-yellow); }
-
-/* Cards */
-.result-card {
-    background: var(--panel); border: 1px solid var(--border); border-left: 5px solid var(--imdb-yellow);
-    border-radius: 6px; padding: 1.1rem 1.4rem; margin-top: 0.8rem;
-}
-.result-card.negative { border-left-color: var(--negative); }
-.result-title { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.2rem 0; color: #FFF; }
-.result-meta { color: var(--text-muted); font-size: 0.9rem; }
-
-.spec-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.2rem;
-}
-.spec-card .label { color: var(--text-muted); font-size: 0.85rem; }
-.spec-card .value { color: var(--imdb-yellow); font-size: 1.6rem; font-weight: 700; margin-top: 0.1rem; }
+    /* Progress */
+    .stProgress > div > div { background: #F5C518; }
 </style>
+""", unsafe_allow_html=True)
+
+# ============================================================
+# NAVBAR MOCKUP
+# ============================================================
+st.markdown("""
+<div class="imdb-navbar">
+    <div class="imdb-logo">IMDb</div>
+    <div class="imdb-menu-icon">☰ Menu</div>
+    <div class="imdb-search-bar">
+        <span class="imdb-search-input">All ▾ Search IMDb...</span>
+    </div>
+    <div class="imdb-nav-links">
+        <span style="color: #57B5F9;">IMDbPro</span>
+        <span><b style="font-size:18px;">+</b> Watchlist</span>
+        <span>Sign In</span>
+        <span>EN ▾</span>
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 
@@ -147,108 +215,169 @@ def file_size_mb(path):
         return os.path.getsize(path) / (1024 * 1024)
     return 0
 
-
 # ============================================================
 # STATE
 # ============================================================
 if "current_text" not in st.session_state:
-    st.session_state.current_text = "The cinematography was absolutely breathtaking. Every scene felt like a painting. Highly recommended!"
-
+    st.session_state.current_text = "The cinematography was breathtaking, and the acting was top-notch. Easily one of the best movies of the year!"
+if "history" not in st.session_state:
+    st.session_state.history = []
 
 # ============================================================
 # SIDEBAR — NAVIGASI
 # ============================================================
 with st.sidebar:
-    st.markdown("### 🎬 IMDb Sentiment AI")
-    st.caption("managed by marcellmchan")
+    st.markdown("<h2 style='color:#F5C518;'>Navigation</h2>", unsafe_allow_html=True)
     page = st.radio(
-        "Navigasi",
-        ["Analisis Ulasan", "Uji Performa Model", "Tentang & Versi"],
+        "Menu",
+        ["Home: Review Analysis", "Box Office: Benchmarks", "Trivia & Versions"],
         label_visibility="collapsed",
     )
     st.markdown("---")
-
-
-# ============================================================
-# HALAMAN 1 — ANALISIS ULASAN
-# ============================================================
-if page == "Analisis Ulasan":
-    st.markdown('<p style="color:#888; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0;">AI Review Analysis</p>', unsafe_allow_html=True)
-    st.title("Rate Your Movie Review")
-    st.write("Tulis ulasan film Anda, pilih mesin inferensi, lalu jalankan klasifikasi sentimen.")
-
-    model_choice = st.radio(
-        "Pilih model inferensi",
-        ["Model asli (.h5)", "Model teroptimasi (.onnx)"],
-        horizontal=True,
-        help="Model teroptimasi (ONNX) dirancang agar inferensi berjalan lebih cepat. Bandingkan performanya di menu 'Uji Performa Model'."
-    )
-
-    user_input = st.text_area(
-        "Tulis ulasan (Bahasa Inggris)", 
-        value=st.session_state.current_text,
-        height=130
-    )
-
-    if st.button("Analisis Sentimen"):
-        if user_input.strip() == "":
-            st.warning("Ulasan tidak boleh kosong.")
-        else:
-            st.session_state.current_text = user_input
-            with st.spinner("Memproses semantik bahasa..."):
-                tokenizer = get_tokenizer()
-                processed = preprocess_text(user_input, tokenizer)
-                
-                if model_choice.startswith("Model asli"):
-                    prob_positive = predict_keras(processed)
-                else:
-                    prob_positive = predict_onnx(processed)
-                
-                label, confidence, prob_positive, prob_negative = classify(prob_positive)
-
-            css_class = "positive" if label == "Positive" else "negative"
-            emoji = "🌟" if label == "Positive" else "💔"
-            rating = round(prob_positive * 10, 1) if label == "Positive" else round(prob_negative * 10, 1)
-
-            st.markdown(f"""
-            <div class="result-card {css_class}">
-                <p class="result-title">{emoji} {label.upper()} REVIEW</p>
-                <p class="result-meta">Tingkat keyakinan: {confidence*100:.1f}% — {model_choice} | Setara IMDb Rating: ★ {rating}/10</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.write("")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.write(f"🌟 Positive Sentiment — {prob_positive*100:.1f}%")
-                st.progress(prob_positive)
-            with c2:
-                st.write(f"💔 Negative Sentiment — {prob_negative*100:.1f}%")
-                st.progress(prob_negative)
-
+    st.caption("IMDb Clone v3 by marcellmchan")
 
 # ============================================================
-# HALAMAN 2 — UJI PERFORMA MODEL
+# HALAMAN 1 — ANALISIS ULASAN (IMDB LAYOUT)
 # ============================================================
-elif page == "Uji Performa Model":
-    st.markdown('<p style="color:#888; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0;">Perbandingan Model</p>', unsafe_allow_html=True)
-    st.title("Keras (.h5) vs ONNX Runtime")
-    st.write(
-        "Model ONNX dibuat untuk mempercepat inferensi. Halaman ini mengukur langsung selisih "
-        "ukuran berkas dan kecepatan klasifikasi memakai teks ulasan terakhir yang Anda masukkan di halaman utama."
-    )
-
-    st.markdown(f"**Ulasan yang diuji:**\n> *\"{st.session_state.current_text[:100]}...\"*")
+if page == "Home: Review Analysis":
     
-    n_runs = st.slider("Jumlah pengulangan inferensi", min_value=3, max_value=50, value=10)
+    # Layout 70-30 seperti "Main Trailer" dan "Up Next" di IMDb
+    col_main, col_side = st.columns([7, 3], gap="large")
 
-    if st.button("Jalankan Benchmark"):
+    with col_main:
+        st.markdown("<h1 class='page-title'>Submit your review</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#AAA; font-size:16px;'>Test our Deep Learning AI sentiment predictor.</p>", unsafe_allow_html=True)
+        
+        model_choice = st.radio(
+            "Engine Select",
+            ["Model asli (.h5)", "Model teroptimasi (.onnx)"],
+            horizontal=True,
+        )
+        
+        user_input = st.text_area(
+            "Write your review",
+            value=st.session_state.current_text,
+            height=150,
+            label_visibility="collapsed"
+        )
+
+        if st.button("Rate This Review"):
+            if user_input.strip() == "":
+                st.warning("Review cannot be empty.")
+            else:
+                st.session_state.current_text = user_input
+                with st.spinner("Analyzing semantic structure..."):
+                    tokenizer = get_tokenizer()
+                    processed = preprocess_text(user_input, tokenizer)
+                    start = time.time()
+
+                    if model_choice.startswith("Model asli"):
+                        prob_positive = predict_keras(processed)
+                        model_label = "H5 Engine"
+                    else:
+                        prob_positive = predict_onnx(processed)
+                        model_label = "ONNX Engine"
+
+                    elapsed = time.time() - start
+                    label, confidence, prob_positive, prob_negative = classify(prob_positive)
+                    score_10 = max(1.0, round(prob_positive * 10, 1))
+
+                st.markdown("### User Ratings")
+                
+                res_col1, res_col2 = st.columns([1, 4])
+                with res_col1:
+                    st.markdown(f"""
+                    <div style="text-align:center;">
+                        <div style="color:#F5C518; font-size:40px; line-height:1;">★</div>
+                        <div style="font-size:24px; font-weight:bold; color:#FFF;">{score_10}<span style="color:#AAA; font-size:16px; font-weight:normal;">/10</span></div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                with res_col2:
+                    border_color = "#F5C518" if label == "Positive" else "#E50914"
+                    st.markdown(f"""
+                    <div style="background-color: #121212; padding: 15px; border-radius: 4px; border-left: 4px solid {border_color};">
+                        <h4 style="color: #FFF; margin-top:0;">{label.upper()} SENTIMENT</h4>
+                        <p style="color: #AAA; margin-bottom: 0;">Inference Time: {elapsed * 1000:.1f}ms via {model_label}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                st.write("")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.caption(f"Positive: {prob_positive*100:.1f}%")
+                    st.progress(prob_positive)
+                with c2:
+                    st.caption(f"Negative: {prob_negative*100:.1f}%")
+                    st.progress(prob_negative)
+
+                st.session_state.history.append({
+                    "snippet": user_input[:40] + "...",
+                    "score": f"★ {score_10}/10",
+                    "label": label,
+                    "engine": model_label
+                })
+
+    with col_side:
+        st.markdown("<h2 style='color:#F5C518; margin-bottom:15px;'>Up next</h2>", unsafe_allow_html=True)
+        
+        # Optimization Info box
+        st.markdown("""
+        <div style="background-color:#121212; padding:15px; margin-bottom:20px;">
+            <p style="color:#FFF; font-weight:bold; margin-bottom:5px;">Model Specs</p>
+            <p style="color:#AAA; font-size:12px; margin-top:0;">Compare sizes of inference engines.</p>
+        """, unsafe_allow_html=True)
+        
+        size_h5 = file_size_mb(H5_MODEL_PATH)
+        size_onnx = file_size_mb(ONNX_MODEL_PATH)
+        st.markdown(f"<p style='color:#FFF; font-size:14px;'>Original (.h5): <span style='color:#F5C518; float:right;'>{size_h5:.2f} MB</span></p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#FFF; font-size:14px;'>Optimized (.onnx): <span style='color:#F5C518; float:right;'>{size_onnx:.2f} MB</span></p>", unsafe_allow_html=True)
+        
+        if size_h5 > 0:
+            st.markdown(f"<p style='color:#AAA; font-size:12px;'>Saving: {(1 - size_onnx/size_h5)*100:.1f}%</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<h3 style='color:#FFF; font-size:16px;'>Recent Reviews</h3>", unsafe_allow_html=True)
+        if st.session_state.history:
+            for item in reversed(st.session_state.history[-4:]):
+                color = "#F5C518" if item['label'] == "Positive" else "#E50914"
+                st.markdown(f"""
+                <div style="margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                    <span style="color: {color}; font-weight: bold; font-size:14px;">{item['score']}</span> 
+                    <span style="color: #FFF; font-size:14px;">- {item['label']}</span>
+                    <br>
+                    <span style="color: #AAA; font-size: 13px;">"{item['snippet']}"</span>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown("<p style='color: #777; font-size:13px;'>No reviews submitted yet.</p>", unsafe_allow_html=True)
+
+# ============================================================
+# HALAMAN 2 — UJI PERFORMA MODEL (BENCHMARK)
+# ============================================================
+elif page == "Box Office: Benchmarks":
+    st.markdown("<h1 class='page-title'>Engine Benchmarks</h1>", unsafe_allow_html=True)
+    st.write(
+        "Ketahui seberapa efisien ONNX Runtime dibandingkan Keras standar. Kami akan menjalankan ulasan "
+        "terakhir Anda berulang kali untuk mendapatkan rata-rata waktu inferensi."
+    )
+
+    st.markdown(f"""
+    <div style="background:#121212; padding:15px; border-left:4px solid #F5C518; margin-bottom:20px;">
+        <p style="color:#AAA; font-size:12px; margin:0;">Test Input:</p>
+        <p style="color:#FFF; margin:0; font-style:italic;">"{st.session_state.current_text[:120]}..."</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    n_runs = st.slider("Number of benchmark runs:", min_value=3, max_value=20, value=10)
+
+    if st.button("Start Benchmark"):
         tokenizer = get_tokenizer()
         processed = preprocess_text(st.session_state.current_text, tokenizer)
         
-        with st.spinner("Menjalankan kedua model secara berulang..."):
-            predict_keras(processed)   # warm-up
-            predict_onnx(processed)    # warm-up
+        with st.spinner("Running benchmarks..."):
+            predict_keras(processed)
+            predict_onnx(processed)
 
             keras_times, onnx_times = [], []
             for _ in range(n_runs):
@@ -272,65 +401,46 @@ elif page == "Uji Performa Model":
         with c1:
             st.markdown(f"""
             <div class="spec-card">
-                <p class="label">Model Keras Asli (.h5)</p>
+                <p class="label">Keras H5 Engine</p>
                 <p class="value">{size_h5:.1f} MB</p>
-                <p class="result-meta">⏱ {avg_h5:.2f} ms/inferensi<br>🧠 Prediksi: {label_h5} ({conf_h5*100:.1f}%)</p>
+                <p style="color:#FFF; margin-bottom:5px;">⏱ {avg_h5:.2f} ms / run</p>
+                <p style="color:#AAA; font-size:12px; margin:0;">Output: {label_h5} ({conf_h5*100:.1f}%)</p>
             </div>
             """, unsafe_allow_html=True)
         with c2:
             st.markdown(f"""
             <div class="spec-card">
-                <p class="label">Model Teroptimasi (.onnx)</p>
+                <p class="label">ONNX Runtime Engine</p>
                 <p class="value">{size_onnx:.1f} MB</p>
-                <p class="result-meta">⏱ {avg_onnx:.2f} ms/inferensi<br>🧠 Prediksi: {label_onnx} ({conf_onnx*100:.1f}%)</p>
+                <p style="color:#FFF; margin-bottom:5px;">⏱ {avg_onnx:.2f} ms / run</p>
+                <p style="color:#AAA; font-size:12px; margin:0;">Output: {label_onnx} ({conf_onnx*100:.1f}%)</p>
             </div>
             """, unsafe_allow_html=True)
 
-        st.write("")
-        reduction = (1 - size_onnx / size_h5) * 100 if size_h5 > 0 else 0
-        speed_note = "lebih cepat" if avg_onnx < avg_h5 else "lebih lambat"
         speed_diff = abs(avg_h5 - avg_onnx)
-        speed_multiplier = avg_h5 / avg_onnx if avg_onnx > 0 else 0
-        agree = "sama" if label_h5 == label_onnx else "berbeda"
+        speed_note = "faster" if avg_onnx < avg_h5 else "slower"
         
-        st.success(
-            f"**Kesimpulan Benchmark:**\n\n"
-            f"Model teroptimasi **{reduction:.0f}% lebih kecil** dan rata-rata **{speed_diff:.2f} ms {speed_note}** "
-            f"({speed_multiplier:.1f}x lebih efisien) dibanding model asli. \n\n"
-            f"Hasil klasifikasi kedua model **{agree}** untuk ulasan ini."
-        )
-
+        st.success(f"**Result:** ONNX Engine is **{speed_diff:.2f} ms {speed_note}** than Keras for this workload.")
 
 # ============================================================
 # HALAMAN 3 — TENTANG & VERSI
 # ============================================================
 else:
-    st.markdown('<p style="color:#888; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0;">Dokumentasi Proyek</p>', unsafe_allow_html=True)
-    st.title("Tentang aplikasi ini")
+    st.markdown("<h1 class='page-title'>Trivia & Versions</h1>", unsafe_allow_html=True)
     st.write(
         "Aplikasi ini mengklasifikasikan sentimen review film berbahasa Inggris ke dalam sentimen "
         "Positif atau Negatif. Menggunakan arsitektur Gated Recurrent Unit (GRU) yang dilatih "
         "pada dataset IMDB 50K."
     )
 
-    with st.expander("Cara pakai"):
-        st.markdown("""
-        1. Buka halaman **Analisis Ulasan**, lalu tulis atau paste ulasan film.
-        2. Pilih model yang ingin dipakai (Keras standar atau ONNX Runtime yang lebih cepat).
-        3. Klik **Analisis Sentimen** untuk melihat hasilnya.
-        4. Untuk melihat perbandingan kecepatan inferensi yang nyata, buka halaman **Uji Performa Model**.
-        """)
-
-    st.subheader("Riwayat versi")
+    st.markdown("### Release History")
     for v in VERSION_HISTORY:
         st.markdown(f"""
-        <div class="spec-card" style="margin-bottom:0.6rem;">
-            <p class="label">{v['versi']}</p>
+        <div class="spec-card" style="margin-bottom:10px;">
+            <p class="label" style="color:#F5C518; font-size:16px;">{v['versi'].upper()}</p>
             <p style="margin-top:0.3rem; color:#E0E0E0;">{v['perubahan']}</p>
         </div>
         """, unsafe_allow_html=True)
 
-    st.caption(
-        "Arsitektur: GRU, Vocab 10.000 kata, Sequence Length 100, klasifikasi biner (sigmoid). "
-        "Model teroptimasi dikonversi ke format ONNX menggunakan tf2onnx untuk performa CPU yang lebih baik."
-    )
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit • Week 5 Deployment Project</div>", unsafe_allow_html=True)
