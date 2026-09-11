@@ -23,7 +23,7 @@ VERSION_HISTORY = [
     {"versi": "v3 (Final)", "perubahan": "Perombakan UI total menyerupai website IMDb asli, navigasi multi-halaman, fitur Model Deep Dive (arsitektur GRU, tokenizer, top keywords), dan halaman Trivia & Versions."},
 ]
 
-st.set_page_config(page_title="IMDb: Ratings, Reviews, and Where to Watch", page_icon="🎬", layout="wide")
+st.set_page_config(page_title="IMDB Movie Review Sentiment Analysis", page_icon="🎬", layout="wide")
 
 # ============================================================
 # GAYA (CSS) - IMDB CLONE THEME
