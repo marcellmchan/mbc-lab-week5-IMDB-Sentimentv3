@@ -234,7 +234,7 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.caption("IMDb Clone v3 by marcellmchan")
+    st.caption("IMDb Sentiment by marcellmchan")
 
 # ============================================================
 # HALAMAN 1 — ANALISIS ULASAN (IMDB LAYOUT)
@@ -443,4 +443,4 @@ else:
         """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit • Week 5 Deployment Project</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit</div>", unsafe_allow_html=True)
