@@ -471,4 +471,4 @@ else:
         """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit • Week 5 Deployment Project</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb sentiment built with Streamlit</div>", unsafe_allow_html=True)
