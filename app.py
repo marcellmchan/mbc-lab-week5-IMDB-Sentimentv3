@@ -40,18 +40,17 @@ st.markdown("""
     }
     
     /* Hide top padding */
-    .block-container { padding-top: 1rem; }
+    .block-container { padding-top: 3rem; }
 
     /* Navbar Mockup IMDb */
     .imdb-navbar {
         background-color: #121212;
-        padding: 10px 20px;
+        padding: 15px 25px;
         display: flex;
         align-items: center;
-        margin-bottom: 25px;
-        margin-top: -15px;
-        margin-left: -50px;
-        margin-right: -50px;
+        margin-bottom: 30px;
+        border-radius: 8px;
+        border: 1px solid #333;
     }
     .imdb-logo {
         background-color: #F5C518;
@@ -234,7 +233,7 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.caption("IMDb Sentiment by marcellmchan")
+    st.caption("IMDb Clone v3 by marcellmchan")
 
 # ============================================================
 # HALAMAN 1 — ANALISIS ULASAN (IMDB LAYOUT)
@@ -443,4 +442,4 @@ else:
         """, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center; color: #555; font-size: 12px;'>An IMDb clone built with Streamlit • Week 5 Deployment Project</div>", unsafe_allow_html=True)
